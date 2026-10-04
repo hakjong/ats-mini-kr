@@ -72,8 +72,7 @@ Band bands[] =
   // https://www.hfunderground.com/wiki/CB
   // Also see MIN_CB_FREQUENCY and MAX_CB_FREQUENCY
   {"CB",   SW_BAND_TYPE, AM,  25000, 28000, 27135, 0, 4, 0, 0},
-  {"DAY",  SW_BAND_TYPE, AM,   9000, 26000, 15450, 1, 4, 0, 0},
-  {"NIGHT", SW_BAND_TYPE, AM,   3000, 13000,  6000, 1, 4, 0, 0},
+  {"SW",   SW_BAND_TYPE, AM,   2300, 26100, 15000, 1, 4, 0, 0},
 };
 
 // Menu order only. Keep bands[] indices stable for saved bands, memories,
@@ -82,7 +81,7 @@ static const uint8_t bandMenuOrder[] = {
   0, 17, 16, 15, // VHF, MW1, MW2, MW3
   1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, // ALL and AM shortwave
   18, 19, 20, 21, 22, 23, 24, 25, 26, // Amateur bands
-  27, 28, 29, // CB, DAY, NIGHT
+  27, 28, // CB, SW
 };
 static_assert(ITEM_COUNT(bandMenuOrder) == ITEM_COUNT(bands), "Band menu order must include every band");
 
@@ -107,10 +106,9 @@ Band *getCurrentBand() { return(&bands[bandIdx]); }
 #define MENU_SCAN         4
 #define MENU_STATIONS     5
 #define MENU_ETM_SCAN     6
-#define MENU_ETM_PLUS_SCAN 7
-#define MENU_MEMORY       8
-#define MENU_SETTINGS     9
-#define MENU_MORE         10
+#define MENU_MEMORY       7
+#define MENU_SETTINGS     8
+#define MENU_MORE         9
 
 int8_t menuIdx = MENU_VOLUME;
 uint8_t tuneModeIdx = TUNE_STEP;
@@ -124,7 +122,6 @@ static const char *menu[] =
   "Scan",
   "Memory",
   "ETM Scan",
-  "ETM+ Scan",
   "Favorite",
   "Settings",
   "---More---",
@@ -152,6 +149,19 @@ void useStepTuneMode()
 {
   if(tuneModeIdx == TUNE_STEP) return;
   tuneModeIdx = TUNE_STEP;
+  prefsRequestSave(SAVE_SETTINGS);
+}
+
+static bool isEtmTuneMode()
+{
+  return tuneModeIdx == TUNE_ETM || tuneModeIdx == TUNE_ETM_PLUS;
+}
+
+static void useEtmTuneMode()
+{
+  uint8_t mode = etmPlusSupported() ? TUNE_ETM_PLUS : TUNE_ETM;
+  if(tuneModeIdx == mode) return;
+  tuneModeIdx = mode;
   prefsRequestSave(SAVE_SETTINGS);
 }
 
@@ -1189,7 +1199,6 @@ void doBandwidth(int16_t enc)
 
 static bool mainMenuItemVisible(int8_t index)
 {
-  if(index == MENU_ETM_PLUS_SCAN) return etmPlusSupported();
   return tuneModeIdx == TUNE_STEP || (index != MENU_SEEK && index != MENU_SCAN);
 }
 
@@ -1223,7 +1232,7 @@ static void doMore(int16_t enc)
 
 static uint8_t lastTuneMenuItem()
 {
-  return etmPlusSupported() ? LAST_ITEM(tuneModes) : TUNE_ETM;
+  return TUNE_ETM;
 }
 
 static void doTuneMenu(int16_t enc)
@@ -1239,7 +1248,7 @@ static void clickMenu(int cmd, bool shortPress)
   switch(cmd)
   {
     case MENU_TUNING:
-      tuneMenuIdx = min(tuneModeIdx, lastTuneMenuItem());
+      tuneMenuIdx = tuneModeIdx == TUNE_ETM_PLUS ? TUNE_ETM : tuneModeIdx;
       currentCmd = CMD_TUNING;
       break;
     case MENU_SEEK:     currentCmd = CMD_SEEK;      break;
@@ -1278,13 +1287,49 @@ static void clickMenu(int cmd, bool shortPress)
       break;
 
     case MENU_ETM_SCAN:
-      currentCmd = CMD_ETM_SCAN;
+      currentCmd = etmPlusSupported() ? CMD_ETM_PLUS_SCAN : CMD_ETM_SCAN;
+      if(etmPlusSupported())
+      {
+        drawMessage("Scanning E-hour...");
+        switch(etmPlusScan())
+        {
+          case EtmPlusScanResult::COMPLETED:
+          {
+            char status[24];
+            snprintf(status, sizeof(status), "ETM+ E%02u saved", etmPlusScanHour());
+            useEtmTuneMode();
+            currentCmd = CMD_NONE;
+            statusShow(status);
+            break;
+          }
+          case EtmPlusScanResult::CANCELLED:
+            currentCmd = CMD_NONE;
+            statusShow("Scan cancelled");
+            break;
+          case EtmPlusScanResult::SAVE_FAILED:
+            currentCmd = CMD_NONE;
+            statusShow("Save failed");
+            break;
+          case EtmPlusScanResult::NO_MEMORY:
+            currentCmd = CMD_NONE;
+            statusShow("Not enough PSRAM");
+            break;
+          case EtmPlusScanResult::NO_CLOCK:
+            currentCmd = CMD_NONE;
+            statusShow("Set clock for ETM+");
+            break;
+          case EtmPlusScanResult::UNSUPPORTED:
+            currentCmd = CMD_NONE;
+            statusShow("SW AM only");
+            break;
+        }
+        break;
+      }
       drawMessage("Scanning band...");
       switch(etmScan())
       {
         case EtmScanResult::COMPLETED:
-          tuneModeIdx = TUNE_ETM;
-          prefsRequestSave(SAVE_SETTINGS);
+          useEtmTuneMode();
           currentCmd = CMD_NONE;
           statusShow("ETM scan saved");
           break;
@@ -1307,49 +1352,17 @@ static void clickMenu(int cmd, bool shortPress)
       }
       break;
 
-    case MENU_ETM_PLUS_SCAN:
-      currentCmd = CMD_ETM_PLUS_SCAN;
-      drawMessage("Scanning E-hour...");
-      switch(etmPlusScan())
-      {
-        case EtmPlusScanResult::COMPLETED:
-        {
-          char status[24];
-          snprintf(status, sizeof(status), "ETM+ E%02u saved", etmPlusScanHour());
-          tuneModeIdx = TUNE_ETM_PLUS;
-          prefsRequestSave(SAVE_SETTINGS);
-          currentCmd = CMD_NONE;
-          statusShow(status);
-          break;
-        }
-        case EtmPlusScanResult::CANCELLED:
-          currentCmd = CMD_NONE;
-          statusShow("Scan cancelled");
-          break;
-        case EtmPlusScanResult::SAVE_FAILED:
-          currentCmd = CMD_NONE;
-          statusShow("Save failed");
-          break;
-        case EtmPlusScanResult::NO_MEMORY:
-          currentCmd = CMD_NONE;
-          statusShow("Not enough PSRAM");
-          break;
-        case EtmPlusScanResult::NO_CLOCK:
-          currentCmd = CMD_NONE;
-          statusShow("Set clock for ETM+");
-          break;
-        case EtmPlusScanResult::UNSUPPORTED:
-          currentCmd = CMD_NONE;
-          statusShow("SW AM only");
-          break;
-      }
-      break;
   }
 }
 
 static void clickTuneMenu()
 {
   currentCmd = CMD_NONE;
+  if(tuneMenuIdx == TUNE_ETM)
+  {
+    useEtmTuneMode();
+    return;
+  }
   if(tuneModeIdx != tuneMenuIdx)
   {
     tuneModeIdx = tuneMenuIdx;
@@ -1563,8 +1576,8 @@ void selectBand(uint8_t idx, bool drawLoadingSSB)
   // Switch radio to the selected band
   useBand(&bands[bandIdx]);
 
-  // ETM+ is only available for AM shortwave bands.
-  if(tuneModeIdx == TUNE_ETM_PLUS && !etmPlusSupported()) useStepTuneMode();
+  // Keep the unified ETM mode on band changes, using hourly ETM+ on AM shortwave.
+  if(isEtmTuneMode()) useEtmTuneMode();
 
   // Set bandwidth for the current mode
   setBandwidth();
