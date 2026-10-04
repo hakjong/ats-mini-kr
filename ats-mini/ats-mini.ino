@@ -12,6 +12,7 @@
 #include "EtmPlus.h"
 #include "Draw.h"
 #include "Storage.h"
+#include "Shortwave.h"
 #include "Themes.h"
 #include "Utils.h"
 #include "EIBI.h"
@@ -585,7 +586,40 @@ bool doSeek(int16_t enc, int16_t enca)
 
       // Clear stale abort state before starting seek
       consumeAbortPending();
-      rx.seekStationProgress(showFrequencySeek, consumeAbortPending, enc>0? 1 : 0);
+      if(shortwaveBroadcastOnly())
+      {
+        uint16_t next = currentFrequency;
+        uint16_t firstMinimum = 0;
+        uint16_t firstMaximum = 0;
+        for(uint8_t i = 0; i < 15; ++i)
+        {
+          uint16_t minimum, maximum;
+          if(!shortwaveBroadcastRange(next, enc, &minimum, &maximum))
+          {
+            next = enc > 0 ? 0 : UINT16_MAX;
+            if(!shortwaveBroadcastRange(next, enc, &minimum, &maximum)) break;
+          }
+          if(i && minimum == firstMinimum && maximum == firstMaximum) break;
+          if(!i)
+          {
+            firstMinimum = minimum;
+            firstMaximum = maximum;
+          }
+          rx.setSeekAmLimits(minimum, maximum);
+          if(currentFrequency < minimum || currentFrequency > maximum)
+          {
+            rx.setFrequency(enc > 0 ? minimum : maximum);
+            showFrequencySeek(rx.getFrequency());
+          }
+          rx.seekStationProgress(showFrequencySeek, consumeAbortPending, enc > 0 ? 1 : 0);
+          if(!rx.getBandLimit()) break;
+          next = enc > 0 ? maximum + 1 : minimum - 1;
+        }
+        const Band *band = getCurrentBand();
+        rx.setSeekAmLimits(band->minimumFreq, band->maximumFreq);
+      }
+      else
+        rx.seekStationProgress(showFrequencySeek, consumeAbortPending, enc>0? 1 : 0);
       updateFrequency(rx.getFrequency(), true);
     }
   }
@@ -672,7 +706,10 @@ bool doTune(int16_t enc)
     step = !stepAdjust? step : enc>0? step - stepAdjust : stepAdjust;
 
     // Tune to a new frequency
-    updateFrequency(currentFrequency + step * enc, true);
+    int32_t frequency = currentFrequency + step * enc;
+    if(shortwaveBroadcastOnly())
+      frequency = shortwaveBroadcastFrequency(frequency, enc);
+    updateFrequency(frequency, true);
   }
 
   // Clear current station name and information

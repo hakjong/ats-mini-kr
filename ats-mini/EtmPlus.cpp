@@ -3,6 +3,7 @@
 #include "EtmPlus.h"
 #include "Menu.h"
 #include "Storage.h"
+#include "Shortwave.h"
 #include "Utils.h"
 
 #include <stdlib.h>
@@ -233,20 +234,42 @@ EtmPlusScanResult etmPlusScan()
   seekStop = false;
   clearStationInfo();
   muteOn(MUTE_TEMP, true);
-  rx.setFrequency(band->minimumFreq);
-  scanProgress(band->minimumFreq);
+  uint16_t scanMinimum = band->minimumFreq;
+  uint16_t scanMaximum = band->maximumFreq;
+  const bool broadcastOnly = shortwaveBroadcastOnly();
+  if(broadcastOnly)
+    shortwaveBroadcastRange(scanMinimum, 1, &scanMinimum, &scanMaximum);
+  rx.setSeekAmLimits(scanMinimum, scanMaximum);
+  rx.setFrequency(scanMinimum);
+  scanProgress(scanMinimum);
   rx.getCurrentReceivedSignalQuality();
   if(rx.getCurrentRSSI() >= 10 && rx.getCurrentSNR() >= 3)
   {
-    rememberFrequency(*found, band->minimumFreq);
+    rememberFrequency(*found, scanMinimum);
     drawScreen();
   }
 
-  uint16_t previous = band->minimumFreq;
+  uint16_t previous = scanMinimum;
   while(!scanShouldStop())
   {
     rx.seekStationProgress(scanProgress, scanShouldStop, 1);
-    if(scanAborted || rx.getBandLimit()) break;
+    if(scanAborted) break;
+    if(rx.getBandLimit())
+    {
+      if(!broadcastOnly ||
+         !shortwaveBroadcastRange(scanMaximum + 1, 1, &scanMinimum, &scanMaximum)) break;
+      rx.setSeekAmLimits(scanMinimum, scanMaximum);
+      rx.setFrequency(scanMinimum);
+      scanProgress(scanMinimum);
+      previous = scanMinimum;
+      rx.getCurrentReceivedSignalQuality();
+      if(rx.getCurrentRSSI() >= 10 && rx.getCurrentSNR() >= 3)
+      {
+        rememberFrequency(*found, scanMinimum);
+        drawScreen();
+      }
+      continue;
+    }
 
     const uint16_t freq = rx.getFrequency();
     if(freq > band->maximumFreq) break;
@@ -269,6 +292,7 @@ EtmPlusScanResult etmPlusScan()
   }
 
   activeScan = nullptr;
+  rx.setSeekAmLimits(band->minimumFreq, band->maximumFreq);
   rx.setFrequency(originalFreq);
   currentFrequency = originalFreq;
   muteOn(MUTE_TEMP, false);

@@ -192,6 +192,8 @@ To reset the receiver settings (current band, frequency, favorite stations, down
 | CB   | 25000 kHz     | 28000 kHz     | AM           |
 | SW   | 2300 kHz      | 26100 kHz     | AM           |
 
+In the SW band, the current meter band is shown in small text beside the SW indicator, for example `SW 120m`. VF tuning, Memory ATS, and ETM Scan cover the ITU Region 3 shortwave broadcasting allocations from 11m through 120m. The complete 4750-5060 kHz 60m receiver band is included so 5000 kHz standard-frequency stations can also be found. Other gaps between allocations are skipped.
+
 ## Remote control
 
 Various remote control options are documented on the dedicated [Remote control](remote.md) page.

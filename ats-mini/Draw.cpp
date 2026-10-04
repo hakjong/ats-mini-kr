@@ -3,6 +3,7 @@
 #include "Storage.h"
 #include "Utils.h"
 #include "Menu.h"
+#include "Shortwave.h"
 #include "BleMode.h"
 #include "Stations.h"
 #include "Etm.h"
@@ -121,15 +122,26 @@ void drawMessage(const char *msg)
 //
 void drawBandAndMode(const char *band, const char *mode, int x, int y)
 {
+  const char *meterBand = !strcmp(band, "SW") ? shortwaveMeterBand(currentFrequency) : nullptr;
+  uint16_t meter_width = meterBand ? spr.textWidth(meterBand, FONT_SMALL) + 4 : 0;
+  int band_x = x - meter_width / 2;
+
   spr.setTextDatum(TC_DATUM);
   spr.setTextColor(TH.band_text);
-  uint16_t band_width = spr.drawString(band, x, y);
+  uint16_t band_width = spr.drawString(band, band_x, y);
 
   spr.setTextDatum(TL_DATUM);
-  spr.setTextColor(TH.mode_text);
-  uint16_t mode_width = spr.drawString(mode, x + band_width / 2 + 12, y + 8, FONT_SMALL);
+  if(meterBand)
+  {
+    spr.setTextColor(TH.band_text);
+    spr.drawString(meterBand, band_x + band_width / 2 + 4, y + 8, FONT_SMALL);
+  }
 
-  spr.drawRoundRect(x + band_width / 2 + 7, y + 7, mode_width + 8, 17, 4, TH.mode_border);
+  spr.setTextColor(TH.mode_text);
+  int mode_x = band_x + band_width / 2 + meter_width + 12;
+  uint16_t mode_width = spr.drawString(mode, mode_x, y + 8, FONT_SMALL);
+
+  spr.drawRoundRect(mode_x - 5, y + 7, mode_width + 8, 17, 4, TH.mode_border);
 }
 
 //

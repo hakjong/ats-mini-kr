@@ -3,6 +3,7 @@
 #include "Menu.h"
 #include "Storage.h"
 #include "Stations.h"
+#include "Shortwave.h"
 #include "Utils.h"
 #include "KrFm.h"
 
@@ -387,22 +388,43 @@ StationScanResult stationsScan()
   seekStop = false;
   clearStationInfo();
   muteOn(MUTE_TEMP, true);
-  rx.setFrequency(band->minimumFreq);
-  scanProgress(band->minimumFreq);
+  uint16_t scanMinimum = band->minimumFreq;
+  uint16_t scanMaximum = band->maximumFreq;
+  const bool broadcastOnly = shortwaveBroadcastOnly();
+  if(broadcastOnly)
+    shortwaveBroadcastRange(scanMinimum, 1, &scanMinimum, &scanMaximum);
+  if(broadcastOnly) rx.setSeekAmLimits(scanMinimum, scanMaximum);
+  rx.setFrequency(scanMinimum);
+  scanProgress(scanMinimum);
   rx.getCurrentReceivedSignalQuality();
   if(rx.getCurrentRSSI() >= (currentMode == FM ? 5 : 10) &&
      rx.getCurrentSNR() >= (currentMode == FM ? 2 : 3))
   {
-    rememberStation(found, band->minimumFreq);
+    rememberStation(found, scanMinimum);
     drawScreen();
   }
 
-  uint16_t previous = band->minimumFreq;
+  uint16_t previous = scanMinimum;
   while(!scanShouldStop())
   {
     rx.seekStationProgress(scanProgress, scanShouldStop, 1);
     if(scanAborted) break;
-    if(rx.getBandLimit()) break;
+    if(rx.getBandLimit())
+    {
+      if(!broadcastOnly ||
+         !shortwaveBroadcastRange(scanMaximum + 1, 1, &scanMinimum, &scanMaximum)) break;
+      rx.setSeekAmLimits(scanMinimum, scanMaximum);
+      rx.setFrequency(scanMinimum);
+      scanProgress(scanMinimum);
+      previous = scanMinimum;
+      rx.getCurrentReceivedSignalQuality();
+      if(rx.getCurrentRSSI() >= 10 && rx.getCurrentSNR() >= 3)
+      {
+        rememberStation(found, scanMinimum);
+        drawScreen();
+      }
+      continue;
+    }
 
     const uint16_t freq = rx.getFrequency();
     if(freq > band->maximumFreq) break;
@@ -427,6 +449,7 @@ StationScanResult stationsScan()
   }
 
   activeScan = nullptr;
+  if(currentMode != FM) rx.setSeekAmLimits(band->minimumFreq, band->maximumFreq);
   rx.setFrequency(originalFreq);
   currentFrequency = originalFreq;
   muteOn(MUTE_TEMP, false);

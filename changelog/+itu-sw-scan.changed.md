@@ -1,0 +1,1 @@
+Changed SW VF tuning, Memory ATS, and ETM Scan to cover the ITU Region 3 shortwave broadcasting allocations from 11m through 120m, including 5000 kHz standard-frequency stations while skipping the other gaps between bands. The current meter band is shown in small text beside the SW indicator.
