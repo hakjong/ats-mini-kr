@@ -1,1 +1,1 @@
-Memory, ETM, and ETM+ now show the current frequency's one-based position and the total number of frequencies in the active list, right-aligned with lower padding in the station-name area. Frequencies outside the active list are shown as `- / total`.
+VM, ETM, and ETM+ now show the current frequency's one-based position and the total number of frequencies in the active list, right-aligned with lower padding in the station-name area. Frequencies outside the active list are shown as `- / total`.

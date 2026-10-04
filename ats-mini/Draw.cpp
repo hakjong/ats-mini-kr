@@ -200,7 +200,7 @@ void drawFrequency(uint32_t freq, int x, int y, int ux, int uy, uint8_t hl)
   spr.setTextColor(TH.freq_text);
 
   auto drawTuneMode = [ux, uy]() {
-    const char *name = tuneModeIdx == TUNE_STATIONS ? "Mem" : getTuneModeName();
+    const char *name = getTuneModeName();
     bool inMemory = stationsHasFrequency(currentFrequency);
     bool inFavorite = currentFrequencyIsFavorite();
 

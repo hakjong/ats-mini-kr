@@ -101,14 +101,15 @@ Band *getCurrentBand() { return(&bands[bandIdx]); }
 
 #define MENU_BAND         0
 #define MENU_VOLUME       1
-#define MENU_TUNING       2
-#define MENU_SEEK         3
-#define MENU_SCAN         4
-#define MENU_STATIONS     5
-#define MENU_ETM_SCAN     6
-#define MENU_MEMORY       7
-#define MENU_SETTINGS     8
-#define MENU_MORE         9
+#define MENU_VF_VM        2
+#define MENU_ETM_MODE     3
+#define MENU_SEEK         4
+#define MENU_SCAN         5
+#define MENU_STATIONS     6
+#define MENU_ETM_SCAN     7
+#define MENU_MEMORY       8
+#define MENU_SETTINGS     9
+#define MENU_MORE         10
 
 int8_t menuIdx = MENU_VOLUME;
 uint8_t tuneModeIdx = TUNE_STEP;
@@ -117,7 +118,8 @@ static const char *menu[] =
 {
   "Band",
   "Volume",
-  "TuneMode",
+  "VF/VM",
+  "ETM",
   "Seek",
   "Scan",
   "Memory",
@@ -126,9 +128,6 @@ static const char *menu[] =
   "Settings",
   "---More---",
 };
-
-static uint8_t tuneMenuIdx = TUNE_STEP;
-static const char *const tuneModes[] = { "Step", "Memory", "ETM", "ETM+" };
 
 const char *getTuneModeName()
 {
@@ -142,7 +141,14 @@ const char *getTuneModeName()
       return etmPlusName;
     }
   }
-  return tuneModeIdx > TUNE_STEP && tuneModeIdx < ITEM_COUNT(tuneModes) ? tuneModes[tuneModeIdx] : "";
+  switch(tuneModeIdx)
+  {
+    case TUNE_STEP:     return "VF";
+    case TUNE_STATIONS: return "VM";
+    case TUNE_ETM:      return "ETM";
+    case TUNE_ETM_PLUS: return "ETM+";
+  }
+  return "";
 }
 
 void useStepTuneMode()
@@ -1199,7 +1205,10 @@ void doBandwidth(int16_t enc)
 
 static bool mainMenuItemVisible(int8_t index)
 {
-  return tuneModeIdx == TUNE_STEP || (index != MENU_SEEK && index != MENU_SCAN);
+  if(index == MENU_SEEK || index == MENU_SCAN) return tuneModeIdx == TUNE_STEP;
+  if(index == MENU_STATIONS) return !isEtmTuneMode();
+  if(index == MENU_ETM_SCAN) return isEtmTuneMode();
+  return true;
 }
 
 static int8_t nextMainMenuItem(int8_t index, int8_t direction)
@@ -1230,16 +1239,6 @@ static void doMore(int16_t enc)
   moreIdx = wrap_range(moreIdx, enc, SUBMENU_BACK, LAST_ITEM(more));
 }
 
-static uint8_t lastTuneMenuItem()
-{
-  return TUNE_ETM;
-}
-
-static void doTuneMenu(int16_t enc)
-{
-  tuneMenuIdx = wrap_range(tuneMenuIdx, enc, 0, lastTuneMenuItem());
-}
-
 static void clickMenu(int cmd, bool shortPress)
 {
   // No command yet
@@ -1247,9 +1246,13 @@ static void clickMenu(int cmd, bool shortPress)
 
   switch(cmd)
   {
-    case MENU_TUNING:
-      tuneMenuIdx = tuneModeIdx == TUNE_ETM_PLUS ? TUNE_ETM : tuneModeIdx;
-      currentCmd = CMD_TUNING;
+    case MENU_VF_VM:
+      tuneModeIdx = tuneModeIdx == TUNE_STATIONS ? TUNE_STEP :
+                    tuneModeIdx == TUNE_STEP ? TUNE_STATIONS : TUNE_STEP;
+      prefsRequestSave(SAVE_SETTINGS);
+      break;
+    case MENU_ETM_MODE:
+      useEtmTuneMode();
       break;
     case MENU_SEEK:     currentCmd = CMD_SEEK;      break;
     case MENU_BAND:     currentCmd = CMD_BAND;      break;
@@ -1355,21 +1358,6 @@ static void clickMenu(int cmd, bool shortPress)
   }
 }
 
-static void clickTuneMenu()
-{
-  currentCmd = CMD_NONE;
-  if(tuneMenuIdx == TUNE_ETM)
-  {
-    useEtmTuneMode();
-    return;
-  }
-  if(tuneModeIdx != tuneMenuIdx)
-  {
-    tuneModeIdx = tuneMenuIdx;
-    prefsRequestSave(SAVE_SETTINGS);
-  }
-}
-
 static void clickMore(int cmd)
 {
   if(cmd == SUBMENU_BACK)
@@ -1463,7 +1451,6 @@ bool doSideBar(uint16_t cmd, int16_t enc, int16_t enca)
   {
     // Menus and list-based options must take scrollDirection into account
     case CMD_MENU:       doMenu(scrollDirection * enc);break;
-    case CMD_TUNING:     doTuneMenu(scrollDirection * enc);break;
     case CMD_MORE:       doMore(scrollDirection * enc);break;
     case CMD_MODE:       doMode(scrollDirection * enc);break;
     case CMD_STEP:       doStep(scrollDirection * enc);break;
@@ -1514,7 +1501,6 @@ bool clickHandler(uint16_t cmd, bool shortPress)
   switch(cmd)
   {
     case CMD_MENU:     clickMenu(menuIdx, shortPress);break;
-    case CMD_TUNING:   clickTuneMenu();break;
     case CMD_MORE:     clickMore(moreIdx);break;
     case CMD_SETTINGS: clickSettings(settingsIdx, shortPress);break;
     case CMD_UPDATEFW: otaRequestLatest(updateFwIdx == 1);break;
@@ -1619,7 +1605,7 @@ static void drawCommon(const char *title, int x, int y, int sx, bool cursor = fa
 static void drawMenu(int x, int y, int sx)
 {
   if(!mainMenuItemVisible(menuIdx))
-    menuIdx = MENU_TUNING;
+    menuIdx = MENU_VF_VM;
 
   spr.setTextDatum(MC_DATUM);
 
@@ -1649,27 +1635,6 @@ static void drawMenu(int x, int y, int sx)
     }
     spr.setTextDatum(MC_DATUM);
     spr.drawString(label, 40+x+(sx/2), 64+y+(i*16), FONT_SMALL);
-  }
-}
-
-static void drawTuneMenu(int x, int y, int sx)
-{
-  drawCommon(menu[MENU_TUNING], x, y, sx, true);
-
-  for(int i=-2; i<3; ++i)
-  {
-    int index = tuneMenuIdx + i;
-    if(index < 0 || index > lastTuneMenuItem()) continue;
-    const char *label = tuneModes[index];
-    if(i == 0)
-    {
-      drawZoomedMenu(label);
-      spr.setTextColor(TH.menu_hl_text, TH.menu_hl_bg);
-    }
-    else spr.setTextColor(TH.menu_item);
-    spr.setTextDatum(MC_DATUM);
-    const lgfx::IFont *font = spr.textWidth(label, FONT_SMALL) > 70+sx ? FONT_DEFAULT : FONT_SMALL;
-    spr.drawString(label, 40+x+(sx/2), 64+y+(i*16), font);
   }
 }
 
@@ -2600,7 +2565,6 @@ void drawSideBar(uint16_t cmd, int x, int y, int sx)
   switch(cmd)
   {
     case CMD_MENU:       drawMenu(x, y, sx);       break;
-    case CMD_TUNING:     drawTuneMenu(x, y, sx);   break;
     case CMD_MORE:       drawMore(x, y, sx);       break;
     case CMD_SETTINGS:   drawSettings(x, y, sx);   break;
     case CMD_MODE:       drawMode(x, y, sx);       break;

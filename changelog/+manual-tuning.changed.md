@@ -1,1 +1,1 @@
-Direct frequency input by pressing and rotating is now available only in Step TuneMode and no longer changes TuneMode itself. A remote frequency command still changes TuneMode from Memory, ETM, or ETM+ to Step and saves the selection.
+Direct frequency input by pressing and rotating is available only in VF mode and no longer changes the tuning mode itself. A remote frequency command changes VM, ETM, or ETM+ to VF and saves the selection.
