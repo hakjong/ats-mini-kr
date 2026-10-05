@@ -1106,8 +1106,12 @@ static void clickMemory(uint8_t idx, bool shortPress)
   {
     // If clicking on an empty memory slot, save to it
     if(!memories[idx].freq) memories[idx] = newMemory;
-    // Otherwise, delete memory slot contents
-    else memories[idx].freq = 0;
+    // Otherwise, keep the selected station ready to restore after deleting it
+    else
+    {
+      newMemory = memories[idx];
+      memories[idx].freq = 0;
+    }
   }
   // On a click, do nothing, slot already activated in doMemory()
   else currentCmd = CMD_NONE;
