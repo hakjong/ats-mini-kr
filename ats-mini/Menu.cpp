@@ -227,6 +227,7 @@ static void useEtmTuneMode()
 #define MENU_WIFIMODE    18
 // #define MENU_UPDATEFW    19
 #define MENU_ABOUT       19
+#define MENU_SETTINGS_SEPARATOR 20
 
 
 static uint8_t updateFwIdx = 0;
@@ -257,6 +258,7 @@ static const char *settings[] =
   "Wi-Fi",
   // "Update FW",
   "About",
+  nullptr,
 };
 
 //
@@ -1404,7 +1406,15 @@ static void clickMenu(int cmd, bool shortPress)
 
 static void doSettings(int16_t enc)
 {
-  settingsIdx = wrap_range(settingsIdx, enc, SUBMENU_BACK, LAST_ITEM(settings));
+  int8_t direction = enc > 0 ? 1 : -1;
+  for(int16_t steps = abs(enc); steps; --steps)
+  {
+    do
+    {
+      settingsIdx = wrap_range(settingsIdx, direction, SUBMENU_BACK, LAST_ITEM(settings));
+    }
+    while(settingsIdx == MENU_SETTINGS_SEPARATOR);
+  }
 }
 
 static void clickSettings(int cmd, bool shortPress)
@@ -1681,12 +1691,19 @@ static void drawSettings(int x, int y, int sx)
   spr.setTextColor(TH.menu_item);
   spr.fillRoundRect(6+x, 24+y+(2*16), 66+sx, 16, 2, TH.menu_hl_bg);
 
-  int count = ITEM_COUNT(settings) + 1;
-  int position = settingsIdx + 1;
   for(int i=-2 ; i<3 ; i++)
   {
-    int index = (position + count + i) % count - 1;
-    const char *label = index == SUBMENU_BACK ? "---Back---" : settings[index];
+    int index = settingsIdx;
+    int8_t direction = i > 0 ? 1 : -1;
+    for(int steps = abs(i); steps; --steps)
+      index = wrap_range(index, direction, SUBMENU_BACK, LAST_ITEM(settings));
+    int rowY = 64+y+(i*16);
+    if(index == MENU_SETTINGS_SEPARATOR)
+    {
+      spr.drawLine(10+x, rowY, 70+x+sx, rowY, TH.menu_border);
+      continue;
+    }
+    const char *label = index == SUBMENU_BACK ? "(Back)" : settings[index];
     if(i==0) {
       drawZoomedMenu(label);
       spr.setTextColor(TH.menu_hl_text, TH.menu_hl_bg);
@@ -1695,7 +1712,7 @@ static void drawSettings(int x, int y, int sx)
     }
 
     spr.setTextDatum(MC_DATUM);
-    spr.drawString(label, 40+x+(sx/2), 64+y+(i*16), FONT_SMALL);
+    spr.drawString(label, 40+x+(sx/2), rowY, FONT_SMALL);
   }
 }
 
@@ -1895,7 +1912,7 @@ static void drawStations(int x, int y, int sx)
     if(index < 0 || index >= count) continue;
     char frequency[16];
     if(index == STATION_BACK)
-      strlcpy(frequency, "---Back---", sizeof(frequency));
+      strlcpy(frequency, "(Back)", sizeof(frequency));
     else if(index == STATION_ADD_CURRENT)
       strlcpy(frequency, "Add Current", sizeof(frequency));
     else if(index == STATION_ATS_SCAN)
