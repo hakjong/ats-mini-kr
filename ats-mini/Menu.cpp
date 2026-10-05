@@ -104,26 +104,30 @@ Band *getCurrentBand() { return(&bands[bandIdx]); }
 #define MENU_ETM_MODE     2
 #define MENU_ETM_PLUS_MODE 3
 #define MENU_SEPARATOR    4
-#define MENU_BAND         5
-#define MENU_VOLUME       6
-#define MENU_SLEEP_TIMER  7
-#define MENU_SEEK         8
-#define MENU_SCAN         9
-#define MENU_STATIONS     10
-#define MENU_ETM_SCAN     11
-#define MENU_ETM_PLUS_SCAN 12
-#define MENU_MEMORY       13
-#define MENU_SETTINGS     14
-#define MENU_CONTROLS_SEPARATOR 15
-#define MENU_SQUELCH      16
-#define MENU_BANDWIDTH    17
-#define MENU_AGC_ATT      18
-#define MENU_AVC          19
-#define MENU_SOFTMUTE     20
-#define MENU_MODE         21
-#define MENU_STEP         22
-#define MENU_NTP_NOW      23
-#define MENU_END_SEPARATOR 24
+#define MENU_SW           5
+#define MENU_VHF          6
+#define MENU_MW2          7
+#define MENU_BAND         8
+#define MENU_BANDS_SEPARATOR 9
+#define MENU_VOLUME       10
+#define MENU_SLEEP_TIMER  11
+#define MENU_SEEK         12
+#define MENU_SCAN         13
+#define MENU_STATIONS     14
+#define MENU_ETM_SCAN     15
+#define MENU_ETM_PLUS_SCAN 16
+#define MENU_MEMORY       17
+#define MENU_SETTINGS     18
+#define MENU_CONTROLS_SEPARATOR 19
+#define MENU_SQUELCH      20
+#define MENU_BANDWIDTH    21
+#define MENU_AGC_ATT      22
+#define MENU_AVC          23
+#define MENU_SOFTMUTE     24
+#define MENU_MODE         25
+#define MENU_STEP         26
+#define MENU_NTP_NOW      27
+#define MENU_END_SEPARATOR 28
 
 int8_t menuIdx = MENU_VOLUME;
 uint8_t tuneModeIdx = TUNE_STEP;
@@ -135,7 +139,11 @@ static const char *menu[] =
   "ETM",
   "ETM+",
   nullptr,
-  "Band",
+  "SW",
+  "VHF",
+  "MW2",
+  "-All Band-",
+  nullptr,
   "Volume",
   "Sleep Timer",
   "Seek",
@@ -1221,6 +1229,21 @@ void doBand(int16_t enc)
   selectBand(bandIdx);
 }
 
+static void selectMainBand(const char *name)
+{
+  // Save current band settings before using a top-level band shortcut.
+  bands[bandIdx].currentFreq = currentFrequency + currentBFO / 1000;
+  bands[bandIdx].bandMode = currentMode;
+
+  for(uint8_t i = 0; i < ITEM_COUNT(bands); ++i)
+    if(!strcmp(bands[i].bandName, name))
+    {
+      selectBand(i);
+      prefsRequestSave(SAVE_SETTINGS | SAVE_BANDS);
+      return;
+    }
+}
+
 void doBandwidth(int16_t enc)
 {
   uint8_t idx = bands[bandIdx].bandwidthIdx;
@@ -1249,13 +1272,16 @@ static bool mainMenuItemActive(int8_t index)
   if(index == MENU_VM) return tuneModeIdx == TUNE_STATIONS;
   if(index == MENU_ETM_MODE) return tuneModeIdx == TUNE_ETM;
   if(index == MENU_ETM_PLUS_MODE) return tuneModeIdx == TUNE_ETM_PLUS;
+  if(index == MENU_SW) return !strcmp(getCurrentBand()->bandName, "SW");
+  if(index == MENU_VHF) return !strcmp(getCurrentBand()->bandName, "VHF");
+  if(index == MENU_MW2) return !strcmp(getCurrentBand()->bandName, "MW2");
   return false;
 }
 
 static bool mainMenuItemSeparator(int8_t index)
 {
-  return index == MENU_SEPARATOR || index == MENU_CONTROLS_SEPARATOR ||
-         index == MENU_END_SEPARATOR;
+  return index == MENU_SEPARATOR || index == MENU_BANDS_SEPARATOR ||
+         index == MENU_CONTROLS_SEPARATOR || index == MENU_END_SEPARATOR;
 }
 
 static bool mainMenuItemSelectable(int8_t index)
@@ -1311,6 +1337,9 @@ static void clickMenu(int cmd, bool shortPress)
     case MENU_ETM_PLUS_MODE:
       useEtmTuneMode(TUNE_ETM_PLUS);
       break;
+    case MENU_SW:       selectMainBand("SW");  break;
+    case MENU_VHF:      selectMainBand("VHF"); break;
+    case MENU_MW2:      selectMainBand("MW2"); break;
     case MENU_SEEK:     currentCmd = CMD_SEEK;      break;
     case MENU_BAND:     currentCmd = CMD_BAND;      break;
     case MENU_SETTINGS:

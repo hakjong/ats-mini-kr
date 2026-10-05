@@ -53,13 +53,14 @@ Direct frequency input is available only in **VF** mode.
 
 The menu can be invoked by clicking the encoder button. Menus and adjustment panels remain open until they are closed with the encoder button or another action.
 
-The tuning-mode controls are at the top of the menu, followed by a separator. The active tuning mode is marked with `*` before its menu label.
+The tuning-mode controls are at the top of the menu, followed by a separator. The active tuning mode is marked with `*` before its menu label. SW, VHF, MW2, and the full band list are grouped between this separator and a second separator above Volume.
 
 * **V. Freq** - Switches directly to frequency-step tuning. VF is the only mode that allows direct frequency input by pressing and rotating.
 * **V. Mem** - Switches directly to tuning frequencies saved in Memory. The selected VF or VM mode is saved across power cycles.
 * **ETM** - Switches to regular ETM tuning using the current band's most recent ETM Scan list. ETM is available on FM and AM bands, including shortwave. While ETM or ETM+ is active, selecting an AM shortwave band switches to ETM+ if the clock is set, or regular ETM otherwise. A remote frequency command returns to VF.
 * **ETM+** - Shown on AM shortwave bands. Switches to the displayed local hour's ETM+ list and automatically changes lists when the hour changes; the main-screen indicator shows E00 through E23. Selecting a band that does not support ETM+ switches to regular ETM.
-* **Band** - List of [Bands](#bands-table).
+* **SW** / **VHF** / **MW2** - Switches directly to the named band. The active shortcut is marked with `*`; no band shortcut is marked when another band is active.
+* **-All Band-** - Opens the complete [Bands](#bands-table) list, including SW, VHF, and MW2.
 * **Volume** - 0 (silent) ... 63 (max). The headphone volume level can be low (compared to the built-in speaker) due to limitation of the initial hardware design. Use short press to mute/unmute.
 * **Sleep Timer** - Sets a one-shot timer from 10 minutes to 3 hours in 10-minute steps. Select **Off** to cancel it. Entering the menu again allows the duration to be changed or restarted. A clock icon and the remaining hours and minutes are shown in the status bar while the timer is active. When time expires, the receiver enters Deep Sleep; press the encoder button to restart it.
 * **Seek** - Shown in the main menu only in VF mode. Seek up or down on AM/FM, normal tuning on LSB/USB (hardware seek function is not supported by SI4732 on SSB). Rotate or click the encoder to stop the seek. Use short press to switch between the seek and [schedule](#schedule) modes. Use press and rotate for manual fine tuning.
