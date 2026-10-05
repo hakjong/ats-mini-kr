@@ -1691,8 +1691,10 @@ static void drawSettings(int x, int y, int sx)
 
   for(int i=-2 ; i<3 ; i++)
   {
-    int index = settingsIdx + i;
-    if(index < SUBMENU_BACK || index > LAST_ITEM(settings)) continue;
+    int index = settingsIdx;
+    int8_t direction = i > 0 ? 1 : -1;
+    for(int steps = abs(i); steps; --steps)
+      index = wrap_range(index, direction, SUBMENU_BACK, LAST_ITEM(settings));
     int rowY = 64+y+(i*16);
     const char *label = index == SUBMENU_BACK ? "---Back---" : settings[index];
     if(i==0) {
