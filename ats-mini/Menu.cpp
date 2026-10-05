@@ -120,7 +120,7 @@ static const char *menu[] =
 {
   "V. Freq",
   "V. Mem",
-  "V. ETM",
+  "ETM",
   nullptr,
   "Band",
   "Volume",
