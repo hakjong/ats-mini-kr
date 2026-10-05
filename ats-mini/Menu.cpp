@@ -110,9 +110,17 @@ Band *getCurrentBand() { return(&bands[bandIdx]); }
 #define MENU_STATIONS     8
 #define MENU_ETM_SCAN     9
 #define MENU_MEMORY       10
-#define MENU_MORE         11
-#define MENU_SETTINGS     12
-#define MENU_END_SEPARATOR 13
+#define MENU_SETTINGS     11
+#define MENU_CONTROLS_SEPARATOR 12
+#define MENU_SQUELCH      13
+#define MENU_BANDWIDTH    14
+#define MENU_AGC_ATT      15
+#define MENU_AVC          16
+#define MENU_SOFTMUTE     17
+#define MENU_MODE         18
+#define MENU_STEP         19
+#define MENU_NTP_NOW      20
+#define MENU_END_SEPARATOR 21
 
 int8_t menuIdx = MENU_VOLUME;
 uint8_t tuneModeIdx = TUNE_STEP;
@@ -130,8 +138,16 @@ static const char *menu[] =
   "Memory",
   "ETM Scan",
   "Favorite",
-  "More",
   "Settings",
+  nullptr,
+  "Squelch",
+  "Bandwidth",
+  "AGC/ATTN",
+  "AVC",
+  "SoftMute",
+  "Mode",
+  "Step",
+  "NTP Now",
   nullptr,
 };
 
@@ -184,21 +200,7 @@ static void useEtmTuneMode()
   prefsRequestSave(SAVE_SETTINGS);
 }
 
-// More submenu
 #define SUBMENU_BACK   -1
-#define MORE_SQUELCH   0
-#define MORE_BW        1
-#define MORE_AGC_ATT   2
-#define MORE_AVC       3
-#define MORE_SOFTMUTE  4
-#define MORE_MODE      5
-#define MORE_STEP      6
-#define MORE_NTP_NOW   7
-
-static int8_t moreIdx = MORE_SQUELCH;
-static const char *const more[] = {
-  "Squelch", "Bandwidth", "AGC/ATTN", "AVC", "SoftMute", "Mode", "Step", "NTP Now",
-};
 
 //
 // Settings Menu
@@ -1234,7 +1236,8 @@ static bool mainMenuItemActive(int8_t index)
 
 static bool mainMenuItemSeparator(int8_t index)
 {
-  return index == MENU_SEPARATOR || index == MENU_END_SEPARATOR;
+  return index == MENU_SEPARATOR || index == MENU_CONTROLS_SEPARATOR ||
+         index == MENU_END_SEPARATOR;
 }
 
 static bool mainMenuItemSelectable(int8_t index)
@@ -1275,11 +1278,6 @@ void openMainMenu()
   currentCmd = CMD_MENU;
 }
 
-static void doMore(int16_t enc)
-{
-  moreIdx = wrap_range(moreIdx, enc, SUBMENU_BACK, LAST_ITEM(more));
-}
-
 static void clickMenu(int cmd, bool shortPress)
 {
   // No command yet
@@ -1294,15 +1292,23 @@ static void clickMenu(int cmd, bool shortPress)
       break;
     case MENU_SEEK:     currentCmd = CMD_SEEK;      break;
     case MENU_BAND:     currentCmd = CMD_BAND;      break;
-    case MENU_MORE:
-      moreIdx = SUBMENU_BACK;
-      currentCmd = CMD_MORE;
-      break;
     case MENU_SETTINGS:
       settingsIdx = SUBMENU_BACK;
       currentCmd = CMD_SETTINGS;
       break;
     case MENU_VOLUME:   currentCmd = CMD_VOLUME;    break;
+    case MENU_SQUELCH:  currentCmd = CMD_SQUELCH;   break;
+    case MENU_BANDWIDTH: currentCmd = CMD_BANDWIDTH; break;
+    case MENU_AGC_ATT:  currentCmd = CMD_AGC;       break;
+    case MENU_AVC:
+      if(currentMode != FM) currentCmd = CMD_AVC;
+      break;
+    case MENU_SOFTMUTE:
+      if(currentMode != FM) currentCmd = CMD_SOFTMUTE;
+      break;
+    case MENU_MODE:     currentCmd = CMD_MODE;      break;
+    case MENU_STEP:     currentCmd = CMD_STEP;      break;
+    case MENU_NTP_NOW:  netSyncTimeOnce();          break;
 
     case MENU_MEMORY:
       currentCmd = CMD_MEMORY;
@@ -1396,31 +1402,6 @@ static void clickMenu(int cmd, bool shortPress)
   }
 }
 
-static void clickMore(int cmd)
-{
-  if(cmd == SUBMENU_BACK)
-  {
-    currentCmd = CMD_MENU;
-    return;
-  }
-  currentCmd = CMD_NONE;
-  switch(cmd)
-  {
-    case MORE_SQUELCH:  currentCmd = CMD_SQUELCH;   break;
-    case MORE_BW:       currentCmd = CMD_BANDWIDTH; break;
-    case MORE_AGC_ATT:  currentCmd = CMD_AGC;       break;
-    case MORE_AVC:
-      if(currentMode != FM) currentCmd = CMD_AVC;
-      break;
-    case MORE_SOFTMUTE:
-      if(currentMode != FM) currentCmd = CMD_SOFTMUTE;
-      break;
-    case MORE_MODE:     currentCmd = CMD_MODE;      break;
-    case MORE_STEP:     currentCmd = CMD_STEP;      break;
-    case MORE_NTP_NOW:  netSyncTimeOnce();           break;
-  }
-}
-
 static void doSettings(int16_t enc)
 {
   settingsIdx = wrap_range(settingsIdx, enc, SUBMENU_BACK, LAST_ITEM(settings));
@@ -1489,7 +1470,6 @@ bool doSideBar(uint16_t cmd, int16_t enc, int16_t enca)
   {
     // Menus and list-based options must take scrollDirection into account
     case CMD_MENU:       doMenu(scrollDirection * enc);break;
-    case CMD_MORE:       doMore(scrollDirection * enc);break;
     case CMD_MODE:       doMode(scrollDirection * enc);break;
     case CMD_STEP:       doStep(scrollDirection * enc);break;
     case CMD_AGC:        doAgc(enc);break;
@@ -1539,7 +1519,6 @@ bool clickHandler(uint16_t cmd, bool shortPress)
   switch(cmd)
   {
     case CMD_MENU:     clickMenu(menuIdx, shortPress);break;
-    case CMD_MORE:     clickMore(moreIdx);break;
     case CMD_SETTINGS: clickSettings(settingsIdx, shortPress);break;
     case CMD_UPDATEFW: otaRequestLatest(updateFwIdx == 1);break;
     case CMD_MEMORY:   clickMemory(memoryIdx, shortPress);break;
@@ -1688,28 +1667,6 @@ static void drawMenu(int x, int y, int sx)
   }
 }
 
-static void drawMore(int x, int y, int sx)
-{
-  drawCommon(menu[MENU_MORE], x, y, sx, true);
-
-  int count = ITEM_COUNT(more) + 1;
-  int position = moreIdx + 1;
-  for(int i=-2; i<3; ++i)
-  {
-    int index = (position + count + i) % count - 1;
-    const char *label = index == SUBMENU_BACK ? "---Back---" : more[index];
-    if(i == 0)
-    {
-      drawZoomedMenu(label);
-      spr.setTextColor(TH.menu_hl_text, TH.menu_hl_bg);
-    }
-    else spr.setTextColor(TH.menu_item);
-    spr.setTextDatum(MC_DATUM);
-    const lgfx::IFont *font = spr.textWidth(label, FONT_SMALL) > 70+sx ? FONT_DEFAULT : FONT_SMALL;
-    spr.drawString(label, 40+x+(sx/2), 64+y+(i*16), font);
-  }
-}
-
 static void drawSettings(int x, int y, int sx)
 {
   spr.setTextDatum(MC_DATUM);
@@ -1744,7 +1701,7 @@ static void drawSettings(int x, int y, int sx)
 
 static void drawMode(int x, int y, int sx)
 {
-  drawCommon(more[MORE_MODE], x, y, sx, true);
+  drawCommon(menu[MENU_MODE], x, y, sx, true);
 
   int count = ITEM_COUNT(bandModeDesc);
   for(int i=-2 ; i<3 ; i++)
@@ -1767,7 +1724,7 @@ static void drawStep(int x, int y, int sx)
   int count = getLastStep(currentMode) + 1;
   int idx   = bands[bandIdx].currentStepIdx + count;
 
-  drawCommon(more[MORE_STEP], x, y, sx, true);
+  drawCommon(menu[MENU_STEP], x, y, sx, true);
 
   for(int i=-2 ; i<3 ; i++)
   {
@@ -1987,7 +1944,7 @@ static void drawBandwidth(int x, int y, int sx)
   int count = getLastBandwidth(currentMode) + 1;
   int idx   = bands[bandIdx].bandwidthIdx + count;
 
-  drawCommon(more[MORE_BW], x, y, sx, true);
+  drawCommon(menu[MENU_BANDWIDTH], x, y, sx, true);
 
   for(int i=-2 ; i<3 ; i++)
   {
@@ -2312,8 +2269,8 @@ static void drawVolume(int x, int y, int sx)
 
 static void drawAgc(int x, int y, int sx)
 {
-  drawCommon(more[MORE_AGC_ATT], x, y, sx);
-  drawZoomedMenu(more[MORE_AGC_ATT]);
+  drawCommon(menu[MENU_AGC_ATT], x, y, sx);
+  drawZoomedMenu(menu[MENU_AGC_ATT]);
   spr.setTextDatum(MC_DATUM);
   spr.setTextColor(TH.menu_param);
 
@@ -2336,8 +2293,8 @@ static void drawAgc(int x, int y, int sx)
 
 static void drawSquelch(int x, int y, int sx)
 {
-  drawCommon(more[MORE_SQUELCH], x, y, sx);
-  drawZoomedMenu(more[MORE_SQUELCH]);
+  drawCommon(menu[MENU_SQUELCH], x, y, sx);
+  drawZoomedMenu(menu[MENU_SQUELCH]);
   spr.setTextDatum(MC_DATUM);
 
   uint8_t squelchValue = currentSquelch[currentMode] & 0x7f;
@@ -2356,8 +2313,8 @@ static void drawSquelch(int x, int y, int sx)
 
 static void drawSoftMuteMaxAtt(int x, int y, int sx)
 {
-  drawCommon(more[MORE_SOFTMUTE], x, y, sx);
-  drawZoomedMenu(more[MORE_SOFTMUTE]);
+  drawCommon(menu[MENU_SOFTMUTE], x, y, sx);
+  drawZoomedMenu(menu[MENU_SOFTMUTE]);
   spr.setTextDatum(MC_DATUM);
 
   spr.setTextColor(TH.menu_param);
@@ -2391,8 +2348,8 @@ static void drawCal(int x, int y, int sx)
 
 static void drawAvc(int x, int y, int sx)
 {
-  drawCommon(more[MORE_AVC], x, y, sx);
-  drawZoomedMenu(more[MORE_AVC]);
+  drawCommon(menu[MENU_AVC], x, y, sx);
+  drawZoomedMenu(menu[MENU_AVC]);
   spr.setTextDatum(MC_DATUM);
 
   spr.setTextColor(TH.menu_param);
@@ -2615,7 +2572,6 @@ void drawSideBar(uint16_t cmd, int x, int y, int sx)
   switch(cmd)
   {
     case CMD_MENU:       drawMenu(x, y, sx);       break;
-    case CMD_MORE:       drawMore(x, y, sx);       break;
     case CMD_SETTINGS:   drawSettings(x, y, sx);   break;
     case CMD_MODE:       drawMode(x, y, sx);       break;
     case CMD_STEP:       drawStep(x, y, sx);       break;
