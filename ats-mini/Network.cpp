@@ -314,23 +314,18 @@ void netInit(uint8_t netMode)
   netQueue(NET_INIT, netMode);
 }
 
-// Synchronize once while the saved WiFi mode remains Off.
+// Synchronize once without changing the saved WiFi mode.
 void netSyncTimeOnce()
 {
-  if(wifiModeIdx != NET_OFF)
-  {
-    statusShow("Set Wi-Fi mode to Off");
-    return;
-  }
   statusShow(nullptr);
-  netQueue(NET_SYNC_ONCE);
+  netQueue(NET_SYNC_ONCE, wifiModeIdx);
 }
 
 void netCancelSyncOnce()
 {
   if(netCompleted.load() == netGeneration.load() || netAction.load() != NET_SYNC_ONCE) return;
   statusShow(nullptr);
-  netQueue(NET_STOP);
+  netQueue(wifiModeIdx == NET_OFF || wifiModeIdx == NET_SYNC ? NET_STOP : NET_INIT, wifiModeIdx);
 }
 
 //
@@ -388,7 +383,10 @@ static void netWorker(void *parameter)
       if(request.action != NET_STOP && !(request.action == NET_INIT && request.mode == NET_OFF))
       {
         wifiRegisterPowerLevelCallback();
-        uint8_t mode = request.action == NET_SYNC_ONCE ? NET_SYNC : request.mode;
+        uint8_t mode = request.mode;
+        if(request.action == NET_SYNC_ONCE)
+          mode = request.mode == NET_OFF || request.mode == NET_SYNC ? NET_SYNC :
+                 request.mode == NET_AP_ONLY ? NET_AP_CONNECT : request.mode;
         if(mode == NET_AP_ONLY || mode == NET_AP_CONNECT)
         {
           WiFi.mode(mode == NET_AP_ONLY ? WIFI_AP : WIFI_AP_STA);
@@ -414,21 +412,36 @@ static void netWorker(void *parameter)
             continue;
           }
           if(epoch) netPost(request.generation, nullptr, nullptr, 2000, epoch);
-          if(mode == NET_SYNC)
+          if(request.action == NET_SYNC_ONCE && request.mode == NET_AP_ONLY)
+          {
+            wifiStopHardware();
+            wifiRegisterPowerLevelCallback();
+            WiFi.mode(WIFI_AP);
+            wifiInitAP();
+          }
+          else if(mode == NET_SYNC)
           {
             wifiStopHardware();
             netPost(request.generation,
                     request.action == NET_SYNC_ONCE ? (epoch ? "Time synchronized" : "NTP sync failed") : nullptr,
                     nullptr, request.action == NET_SYNC_ONCE ? 2000 : 0);
           }
-          else
+          else if(request.action != NET_SYNC_ONCE)
             netPost(request.generation,
                     ("Connected to WiFi network (" + WiFi.SSID() + ")").c_str(),
                     ("IP : " + WiFi.localIP().toString() + " or atsmini.local").c_str());
+          if(request.action == NET_SYNC_ONCE && mode != NET_SYNC)
+            netPost(request.generation, epoch ? "Time synchronized" : "NTP sync failed");
         }
-        else if(mode == NET_SYNC)
+        else if(mode == NET_SYNC || request.action == NET_SYNC_ONCE)
         {
           wifiStopHardware();
+          if(request.action == NET_SYNC_ONCE && request.mode == NET_AP_ONLY)
+          {
+            wifiRegisterPowerLevelCallback();
+            WiFi.mode(WIFI_AP);
+            wifiInitAP();
+          }
           netPost(request.generation, request.action == NET_SYNC_ONCE ? "WiFi connection failed" : "No WiFi connection");
         }
         else if(mode == NET_AP_ONLY || mode == NET_AP_CONNECT)
@@ -437,7 +450,7 @@ static void netWorker(void *parameter)
         else
           netPost(request.generation, "No WiFi connection");
 
-        if(mode != NET_SYNC && request.generation == netGeneration.load())
+        if((mode != NET_SYNC || request.mode == NET_AP_ONLY) && request.generation == netGeneration.load())
         {
           webInit();
           MDNS.begin("atsmini");

@@ -1,1 +1,1 @@
-Add an NTP Now main menu action that briefly connects using saved Wi-Fi networks while keeping the Wi-Fi mode Off.
+Add an NTP Now main menu action that connects using saved Wi-Fi networks and synchronizes the clock without changing the saved Wi-Fi mode.
