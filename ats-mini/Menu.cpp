@@ -99,29 +99,31 @@ Band *getCurrentBand() { return(&bands[bandIdx]); }
 // Main Menu
 //
 
-#define MENU_BAND         0
-#define MENU_VOLUME       1
-#define MENU_VF           2
-#define MENU_VM           3
-#define MENU_ETM_MODE     4
-#define MENU_SEEK         5
-#define MENU_SCAN         6
-#define MENU_STATIONS     7
-#define MENU_ETM_SCAN     8
-#define MENU_MEMORY       9
-#define MENU_SETTINGS     10
-#define MENU_MORE         11
+#define MENU_VF           0
+#define MENU_VM           1
+#define MENU_ETM_MODE     2
+#define MENU_SEPARATOR    3
+#define MENU_BAND         4
+#define MENU_VOLUME       5
+#define MENU_SEEK         6
+#define MENU_SCAN         7
+#define MENU_STATIONS     8
+#define MENU_ETM_SCAN     9
+#define MENU_MEMORY       10
+#define MENU_SETTINGS     11
+#define MENU_MORE         12
 
 int8_t menuIdx = MENU_VOLUME;
 uint8_t tuneModeIdx = TUNE_STEP;
 
 static const char *menu[] =
 {
-  "Band",
-  "Volume",
   "V. Freq",
   "V. Mem",
   "V. ETM",
+  nullptr,
+  "Band",
+  "Volume",
   "Seek",
   "Scan",
   "Memory",
@@ -1228,7 +1230,22 @@ static bool mainMenuItemActive(int8_t index)
   return false;
 }
 
+static bool mainMenuItemSelectable(int8_t index)
+{
+  return index != MENU_SEPARATOR && mainMenuItemVisible(index);
+}
+
 static int8_t nextMainMenuItem(int8_t index, int8_t direction)
+{
+  do
+  {
+    index = wrap_range(index, direction, 0, LAST_ITEM(menu));
+  }
+  while(!mainMenuItemSelectable(index));
+  return index;
+}
+
+static int8_t nextMainMenuRow(int8_t index, int8_t direction)
 {
   do
   {
@@ -1618,7 +1635,7 @@ static void drawCommon(const char *title, int x, int y, int sx, bool cursor = fa
 
 static void drawMenu(int x, int y, int sx)
 {
-  if(!mainMenuItemVisible(menuIdx))
+  if(!mainMenuItemSelectable(menuIdx))
     menuIdx = MENU_VF;
 
   spr.setTextDatum(MC_DATUM);
@@ -1639,7 +1656,13 @@ static void drawMenu(int x, int y, int sx)
     int index = menuIdx;
     int8_t direction = i > 0 ? 1 : -1;
     for(int steps = abs(i); steps; --steps)
-      index = nextMainMenuItem(index, direction);
+      index = nextMainMenuRow(index, direction);
+    int rowY = 64+y+(i*16);
+    if(index == MENU_SEPARATOR)
+    {
+      spr.drawLine(10+x, rowY, 70+x+sx, rowY, TH.menu_border);
+      continue;
+    }
     char activeLabel[16];
     const char *label = menu[index];
     if(mainMenuItemActive(index))
@@ -1654,7 +1677,7 @@ static void drawMenu(int x, int y, int sx)
       spr.setTextColor(TH.menu_item);
     }
     spr.setTextDatum(MC_DATUM);
-    spr.drawString(label, 40+x+(sx/2), 64+y+(i*16), FONT_SMALL);
+    spr.drawString(label, 40+x+(sx/2), rowY, FONT_SMALL);
   }
 }
 
