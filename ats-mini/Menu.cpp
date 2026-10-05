@@ -200,7 +200,8 @@ static void useEtmTuneMode()
   prefsRequestSave(SAVE_SETTINGS);
 }
 
-#define SUBMENU_BACK   -1
+#define SUBMENU_BACK_SEPARATOR -1
+#define SUBMENU_BACK           -2
 
 //
 // Settings Menu
@@ -1417,7 +1418,7 @@ static void doSettings(int16_t enc)
     {
       settingsIdx = wrap_range(settingsIdx, direction, SUBMENU_BACK, LAST_ITEM(settings));
     }
-    while(settingsIdx == MENU_SETTINGS_SEPARATOR);
+    while(settingsIdx == SUBMENU_BACK_SEPARATOR || settingsIdx == MENU_SETTINGS_SEPARATOR);
   }
 }
 
@@ -1702,12 +1703,12 @@ static void drawSettings(int x, int y, int sx)
     for(int steps = abs(i); steps; --steps)
       index = wrap_range(index, direction, SUBMENU_BACK, LAST_ITEM(settings));
     int rowY = 64+y+(i*16);
-    if(index == MENU_SETTINGS_SEPARATOR)
+    if(index == SUBMENU_BACK_SEPARATOR || index == MENU_SETTINGS_SEPARATOR)
     {
       spr.drawLine(10+x, rowY, 70+x+sx, rowY, TH.menu_border);
       continue;
     }
-    const char *label = index == SUBMENU_BACK ? "(Back)" : settings[index];
+    const char *label = index == SUBMENU_BACK ? "Back" : settings[index];
     if(i==0) {
       drawZoomedMenu(label);
       spr.setTextColor(TH.menu_hl_text, TH.menu_hl_bg);
@@ -1916,7 +1917,12 @@ static void drawStations(int x, int y, int sx)
     if(index < 0 || index >= count) continue;
     char frequency[16];
     if(index == STATION_BACK)
-      strlcpy(frequency, "(Back)", sizeof(frequency));
+      strlcpy(frequency, "Back", sizeof(frequency));
+    else if(index == STATION_BACK_SEPARATOR)
+    {
+      spr.drawLine(10+x, 64+y+(i*16), 70+x+sx, 64+y+(i*16), TH.menu_border);
+      continue;
+    }
     else if(index == STATION_ADD_CURRENT)
       strlcpy(frequency, "Add Current", sizeof(frequency));
     else if(index == STATION_ATS_SCAN)
