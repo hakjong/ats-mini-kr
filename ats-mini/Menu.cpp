@@ -101,15 +101,16 @@ Band *getCurrentBand() { return(&bands[bandIdx]); }
 
 #define MENU_BAND         0
 #define MENU_VOLUME       1
-#define MENU_VF_VM        2
-#define MENU_ETM_MODE     3
-#define MENU_SEEK         4
-#define MENU_SCAN         5
-#define MENU_STATIONS     6
-#define MENU_ETM_SCAN     7
-#define MENU_MEMORY       8
-#define MENU_SETTINGS     9
-#define MENU_MORE         10
+#define MENU_VF           2
+#define MENU_VM           3
+#define MENU_ETM_MODE     4
+#define MENU_SEEK         5
+#define MENU_SCAN         6
+#define MENU_STATIONS     7
+#define MENU_ETM_SCAN     8
+#define MENU_MEMORY       9
+#define MENU_SETTINGS     10
+#define MENU_MORE         11
 
 int8_t menuIdx = MENU_VOLUME;
 uint8_t tuneModeIdx = TUNE_STEP;
@@ -118,7 +119,8 @@ static const char *menu[] =
 {
   "Band",
   "Volume",
-  "VF/VM",
+  "VF",
+  "VM",
   "ETM",
   "Seek",
   "Scan",
@@ -155,6 +157,13 @@ void useStepTuneMode()
 {
   if(tuneModeIdx == TUNE_STEP) return;
   tuneModeIdx = TUNE_STEP;
+  prefsRequestSave(SAVE_SETTINGS);
+}
+
+static void useStationTuneMode()
+{
+  if(tuneModeIdx == TUNE_STATIONS) return;
+  tuneModeIdx = TUNE_STATIONS;
   prefsRequestSave(SAVE_SETTINGS);
 }
 
@@ -1246,11 +1255,8 @@ static void clickMenu(int cmd, bool shortPress)
 
   switch(cmd)
   {
-    case MENU_VF_VM:
-      tuneModeIdx = tuneModeIdx == TUNE_STATIONS ? TUNE_STEP :
-                    tuneModeIdx == TUNE_STEP ? TUNE_STATIONS : TUNE_STEP;
-      prefsRequestSave(SAVE_SETTINGS);
-      break;
+    case MENU_VF:       useStepTuneMode();    break;
+    case MENU_VM:       useStationTuneMode(); break;
     case MENU_ETM_MODE:
       useEtmTuneMode();
       break;
@@ -1605,7 +1611,7 @@ static void drawCommon(const char *title, int x, int y, int sx, bool cursor = fa
 static void drawMenu(int x, int y, int sx)
 {
   if(!mainMenuItemVisible(menuIdx))
-    menuIdx = MENU_VF_VM;
+    menuIdx = MENU_VF;
 
   spr.setTextDatum(MC_DATUM);
 
