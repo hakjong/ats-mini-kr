@@ -200,8 +200,7 @@ static void useEtmTuneMode()
   prefsRequestSave(SAVE_SETTINGS);
 }
 
-#define SUBMENU_BACK_SEPARATOR -1
-#define SUBMENU_BACK           -2
+#define SUBMENU_BACK   -1
 
 //
 // Settings Menu
@@ -228,7 +227,6 @@ static void useEtmTuneMode()
 #define MENU_WIFIMODE    18
 // #define MENU_UPDATEFW    19
 #define MENU_ABOUT       19
-#define MENU_SETTINGS_SEPARATOR 20
 
 
 static uint8_t updateFwIdx = 0;
@@ -259,7 +257,6 @@ static const char *settings[] =
   "Wi-Fi",
   // "Update FW",
   "About",
-  nullptr,
 };
 
 //
@@ -1414,11 +1411,7 @@ static void doSettings(int16_t enc)
   int8_t direction = enc > 0 ? 1 : -1;
   for(int16_t steps = abs(enc); steps; --steps)
   {
-    do
-    {
-      settingsIdx = wrap_range(settingsIdx, direction, SUBMENU_BACK, LAST_ITEM(settings));
-    }
-    while(settingsIdx == SUBMENU_BACK_SEPARATOR || settingsIdx == MENU_SETTINGS_SEPARATOR);
+    settingsIdx = wrap_range(settingsIdx, direction, SUBMENU_BACK, LAST_ITEM(settings));
   }
 }
 
@@ -1698,17 +1691,10 @@ static void drawSettings(int x, int y, int sx)
 
   for(int i=-2 ; i<3 ; i++)
   {
-    int index = settingsIdx;
-    int8_t direction = i > 0 ? 1 : -1;
-    for(int steps = abs(i); steps; --steps)
-      index = wrap_range(index, direction, SUBMENU_BACK, LAST_ITEM(settings));
+    int index = settingsIdx + i;
+    if(index < SUBMENU_BACK || index > LAST_ITEM(settings)) continue;
     int rowY = 64+y+(i*16);
-    if(index == SUBMENU_BACK_SEPARATOR || index == MENU_SETTINGS_SEPARATOR)
-    {
-      spr.drawLine(10+x, rowY, 70+x+sx, rowY, TH.menu_border);
-      continue;
-    }
-    const char *label = index == SUBMENU_BACK ? "Back" : settings[index];
+    const char *label = index == SUBMENU_BACK ? "---Back---" : settings[index];
     if(i==0) {
       drawZoomedMenu(label);
       spr.setTextColor(TH.menu_hl_text, TH.menu_hl_bg);
@@ -1917,12 +1903,7 @@ static void drawStations(int x, int y, int sx)
     if(index < 0 || index >= count) continue;
     char frequency[16];
     if(index == STATION_BACK)
-      strlcpy(frequency, "Back", sizeof(frequency));
-    else if(index == STATION_BACK_SEPARATOR)
-    {
-      spr.drawLine(10+x, 64+y+(i*16), 70+x+sx, 64+y+(i*16), TH.menu_border);
-      continue;
-    }
+      strlcpy(frequency, "---Back---", sizeof(frequency));
     else if(index == STATION_ADD_CURRENT)
       strlcpy(frequency, "Add Current", sizeof(frequency));
     else if(index == STATION_ATS_SCAN)

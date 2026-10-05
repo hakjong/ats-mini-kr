@@ -473,15 +473,7 @@ void stationsSelect(int16_t direction)
   stationsLoad(bandIdx);
   if(!direction) return;
   int16_t total = stationsCount() + STATION_ACTION_COUNT;
-  int8_t step = direction > 0 ? 1 : -1;
-  for(int16_t steps = abs(direction); steps; --steps)
-  {
-    do
-    {
-      selected = (selected + total + step) % total;
-    }
-    while(selected == STATION_BACK_SEPARATOR);
-  }
+  selected = (selected + total + direction % total) % total;
   if(selected < STATION_ACTION_COUNT) return;
   updateFrequency(stationsFrequency(selected - STATION_ACTION_COUNT), false);
   clearStationInfo();
