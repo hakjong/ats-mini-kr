@@ -1,1 +1,1 @@
-Do not reconnect or synchronize time in Sync Only mode after waking from CPU Sleep.
+Do not connect when selecting Sync Only mode if the clock already has time, and do not reconnect or synchronize after waking from CPU Sleep.

@@ -1018,7 +1018,7 @@ static void clickBleMode(uint8_t mode, bool shortPress)
 static void clickWiFiMode(uint8_t mode, bool shortPress)
 {
   currentCmd = CMD_NONE;
-  netInit(mode);
+  netInit(mode == NET_SYNC && clockAvailable() ? NET_OFF : mode);
 }
 
 static void doRDSMode(int16_t enc)
