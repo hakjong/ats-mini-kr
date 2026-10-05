@@ -110,9 +110,9 @@ Band *getCurrentBand() { return(&bands[bandIdx]); }
 #define MENU_STATIONS     8
 #define MENU_ETM_SCAN     9
 #define MENU_MEMORY       10
-#define MENU_SETTINGS     11
-#define MENU_MORE         12
-#define MENU_MORE_SEPARATOR 13
+#define MENU_MORE         11
+#define MENU_SETTINGS     12
+#define MENU_END_SEPARATOR 13
 
 int8_t menuIdx = MENU_VOLUME;
 uint8_t tuneModeIdx = TUNE_STEP;
@@ -130,8 +130,8 @@ static const char *menu[] =
   "Memory",
   "ETM Scan",
   "Favorite",
-  "Settings",
   "More",
+  "Settings",
   nullptr,
 };
 
@@ -1234,7 +1234,7 @@ static bool mainMenuItemActive(int8_t index)
 
 static bool mainMenuItemSeparator(int8_t index)
 {
-  return index == MENU_SEPARATOR || index == MENU_MORE_SEPARATOR;
+  return index == MENU_SEPARATOR || index == MENU_END_SEPARATOR;
 }
 
 static bool mainMenuItemSelectable(int8_t index)
