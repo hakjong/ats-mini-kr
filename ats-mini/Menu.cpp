@@ -106,23 +106,24 @@ Band *getCurrentBand() { return(&bands[bandIdx]); }
 #define MENU_SEPARATOR    4
 #define MENU_BAND         5
 #define MENU_VOLUME       6
-#define MENU_SEEK         7
-#define MENU_SCAN         8
-#define MENU_STATIONS     9
-#define MENU_ETM_SCAN     10
-#define MENU_ETM_PLUS_SCAN 11
-#define MENU_MEMORY       12
-#define MENU_SETTINGS     13
-#define MENU_CONTROLS_SEPARATOR 14
-#define MENU_SQUELCH      15
-#define MENU_BANDWIDTH    16
-#define MENU_AGC_ATT      17
-#define MENU_AVC          18
-#define MENU_SOFTMUTE     19
-#define MENU_MODE         20
-#define MENU_STEP         21
-#define MENU_NTP_NOW      22
-#define MENU_END_SEPARATOR 23
+#define MENU_SLEEP_TIMER  7
+#define MENU_SEEK         8
+#define MENU_SCAN         9
+#define MENU_STATIONS     10
+#define MENU_ETM_SCAN     11
+#define MENU_ETM_PLUS_SCAN 12
+#define MENU_MEMORY       13
+#define MENU_SETTINGS     14
+#define MENU_CONTROLS_SEPARATOR 15
+#define MENU_SQUELCH      16
+#define MENU_BANDWIDTH    17
+#define MENU_AGC_ATT      18
+#define MENU_AVC          19
+#define MENU_SOFTMUTE     20
+#define MENU_MODE         21
+#define MENU_STEP         22
+#define MENU_NTP_NOW      23
+#define MENU_END_SEPARATOR 24
 
 int8_t menuIdx = MENU_VOLUME;
 uint8_t tuneModeIdx = TUNE_STEP;
@@ -136,6 +137,7 @@ static const char *menu[] =
   nullptr,
   "Band",
   "Volume",
+  "Sleep Timer",
   "Seek",
   "Scan",
   "Memory",
@@ -154,6 +156,8 @@ static const char *menu[] =
   "NTP Now",
   nullptr,
 };
+
+static uint16_t sleepTimerMenuMinutes = 0;
 
 const char *getTuneModeName()
 {
@@ -251,7 +255,7 @@ static const char *settings[] =
   "UI Layout",
   "Zoom Menu",
   "Scroll Dir.",
-  "Sleep",
+  "Disp. Sleep",
   "Sleep Mode",
   "Load EiBi",
   "USB Port",
@@ -986,6 +990,11 @@ static void doSleep(int16_t enc)
   currentSleep = clamp_range(currentSleep, 5*enc, 0, 255);
 }
 
+static void doSleepTimer(int16_t enc)
+{
+  sleepTimerMenuMinutes = clamp_range(sleepTimerMenuMinutes, 10*enc, 0, 180);
+}
+
 static void doSleepMode(int16_t enc)
 {
   sleepModeIdx = wrap_range(sleepModeIdx, enc, 0, LAST_ITEM(sleepModeDesc));
@@ -1309,6 +1318,10 @@ static void clickMenu(int cmd, bool shortPress)
       currentCmd = CMD_SETTINGS;
       break;
     case MENU_VOLUME:   currentCmd = CMD_VOLUME;    break;
+    case MENU_SLEEP_TIMER:
+      sleepTimerMenuMinutes = sleepTimerConfiguredMinutes();
+      currentCmd = CMD_SLEEP_TIMER;
+      break;
     case MENU_SQUELCH:  currentCmd = CMD_SQUELCH;   break;
     case MENU_BANDWIDTH: currentCmd = CMD_BANDWIDTH; break;
     case MENU_AGC_ATT:  currentCmd = CMD_AGC;       break;
@@ -1511,6 +1524,7 @@ bool doSideBar(uint16_t cmd, int16_t enc, int16_t enca)
         stationsSelect(scrollDirection * enc);
       break;
     case CMD_SLEEP:      doSleep(enca);break;
+    case CMD_SLEEP_TIMER: doSleepTimer(scrollDirection * enc);break;
     case CMD_SLEEPMODE:  doSleepMode(scrollDirection * enc);break;
     case CMD_USBMODE:    doUSBMode(scrollDirection * enc);break;
     case CMD_TCPMODE:    doTCPMode(scrollDirection * enc);break;
@@ -1547,6 +1561,11 @@ bool clickHandler(uint16_t cmd, bool shortPress)
     case CMD_STATIONS: clickStations(shortPress);break;
     case CMD_FREQ:     return(clickFreq(shortPress));
     case CMD_DATETIME: clickDateTime(shortPress);break;
+    case CMD_SLEEP_TIMER:
+      sleepTimerSet(sleepTimerMenuMinutes);
+      statusShow(sleepTimerMenuMinutes ? "Sleep timer set" : "Sleep timer off");
+      currentCmd = CMD_NONE;
+      break;
     default:           return(false);
   }
 
@@ -2474,6 +2493,34 @@ static void drawSleep(int x, int y, int sx)
   spr.drawNumber(currentSleep, 40+x+(sx/2), 60+y, FONT_LARGE);
 }
 
+static void drawSleepTimer(int x, int y, int sx)
+{
+  drawCommon(menu[MENU_SLEEP_TIMER], x, y, sx, true);
+
+  for(int i=-2; i<3; ++i)
+  {
+    int minutes = sleepTimerMenuMinutes + i * 10;
+    if(minutes < 0 || minutes > 180) continue;
+
+    char value[12];
+    if(minutes)
+      snprintf(value, sizeof(value), "%d min", minutes);
+    else
+      strcpy(value, "Off");
+
+    if(i == 0)
+    {
+      drawZoomedMenu(value);
+      spr.setTextColor(TH.menu_hl_text, TH.menu_hl_bg);
+    }
+    else
+      spr.setTextColor(TH.menu_item);
+
+    spr.setTextDatum(MC_DATUM);
+    spr.drawString(value, 40+x+(sx/2), 64+y+(i*16), FONT_SMALL);
+  }
+}
+
 static void drawZoom(int x, int y, int sx)
 {
   drawCommon(settings[MENU_ZOOM], x, y, sx);
@@ -2615,6 +2662,7 @@ void drawSideBar(uint16_t cmd, int x, int y, int sx)
     case CMD_RDS:        drawRDSMode(x, y, sx);    break;
     case CMD_MEMORY:     drawMemory(x, y, sx);     break;
     case CMD_SLEEP:      drawSleep(x, y, sx);      break;
+    case CMD_SLEEP_TIMER: drawSleepTimer(x, y, sx); break;
     case CMD_SLEEPMODE:  drawSleepMode(x, y, sx);  break;
     case CMD_USBMODE:    drawUSBMode(x, y, sx);    break;
     case CMD_TCPMODE:    drawTCPMode(x, y, sx);    break;

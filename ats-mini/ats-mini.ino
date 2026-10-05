@@ -161,7 +161,8 @@ void setup()
 
   // Press and hold Encoder button to force an preferences reset
   // Note: preferences reset is recommended after firmware updates
-  if(digitalRead(ENCODER_PUSH_BUTTON)==LOW)
+  if(esp_sleep_get_wakeup_cause() != ESP_SLEEP_WAKEUP_EXT0 &&
+     digitalRead(ENCODER_PUSH_BUTTON)==LOW)
   {
     nvsErase();
     diskInit(true);
@@ -828,6 +829,8 @@ bool processRssiSnr()
 //
 void loop()
 {
+  sleepTimerTick();
+
   uint32_t currentTime = millis();
   bool needRedraw = false;
 

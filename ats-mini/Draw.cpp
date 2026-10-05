@@ -51,6 +51,29 @@ void drawBleIndicator(int x, int y)
 }
 
 //
+// Draw sleep timer indicator
+//
+void drawSleepTimerIndicator(int x, int y)
+{
+  uint16_t minutes = sleepTimerRemainingMinutes();
+  if(!minutes) return;
+
+  uint16_t color = TFT_WHITE;
+  char remaining[6];
+  snprintf(remaining, sizeof(remaining), "%u:%02u", minutes / 60, minutes % 60);
+
+  spr.setTextDatum(MR_DATUM);
+  spr.setTextColor(color);
+  int textWidth = spr.drawString(remaining, x, y + 7, FONT_SMALL);
+
+  int clockX = x - textWidth - 10;
+  spr.drawCircle(clockX, y + 7, 6, color);
+  spr.drawLine(clockX, y + 7, clockX, y + 3, color);
+  spr.drawLine(clockX, y + 7, clockX + 3, y + 9, color);
+  spr.drawLine(clockX - 2, y, clockX + 2, y, color);
+}
+
+//
 // Draw WiFi indicator
 //
 void drawWiFiIndicator(int x, int y)

@@ -27,6 +27,13 @@ int getStrength(int rssi);
 bool sleepOn(int x = 2);
 bool muteOn(uint8_t mode, int x = 2);
 
+// One-shot timer that enters ESP32 deep sleep when it expires.
+void sleepTimerSet(uint16_t minutes);
+uint16_t sleepTimerConfiguredMinutes();
+uint16_t sleepTimerRemainingMinutes();
+uint32_t sleepTimerRemainingMillis();
+void sleepTimerTick();
+
 // Main task only. Strings are copied; duration 0 keeps the status until replaced or cleared.
 // Pass nullptr for both lines to clear the status.
 void statusShow(const char *line1, const char *line2 = nullptr, uint32_t duration = 2000);

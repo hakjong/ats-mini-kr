@@ -40,6 +40,7 @@ void drawScreen();
 void drawWiFiIndicator(int x, int y);
 void drawSaveIndicator(int x, int y);
 void drawBleIndicator(int x, int y);
+void drawSleepTimerIndicator(int x, int y);
 void drawBandAndMode(const char *band, const char *mode, int x, int y);
 void drawFrequency(uint32_t freq, int x, int y, int ux, int uy, uint8_t hl);
 void drawLongStationName(const char *name, int x, int y);

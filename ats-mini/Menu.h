@@ -30,6 +30,7 @@
 #define CMD_SCAN       0x1B00 // |
 #define CMD_SQUELCH    0x1C00 // |
 #define CMD_STATIONS   0x1D00 // | Saved stations in the current band
+#define CMD_SLEEP_TIMER 0x1E00 // | Deep sleep timer
 #define CMD_ETM_SCAN   0x1F80 //-+ ETM band scan
 #define CMD_ETM_PLUS_SCAN 0x1F81 //-+ Hourly shortwave ETM+ scan
 #define CMD_SETTINGS   0x2000 //-SETTINGS MODE starts here

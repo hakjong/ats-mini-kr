@@ -1,0 +1,1 @@
+Added a main-menu Sleep Timer that can be set or restarted from 10 minutes to 3 hours in 10-minute steps, or cancelled with Off. The status bar shows a clock icon and remaining time while active, and the receiver enters Deep Sleep when the timer expires. The existing Settings sleep interval is renamed Disp. Sleep to distinguish it from the new timer.

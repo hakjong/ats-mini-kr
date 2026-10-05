@@ -16,7 +16,11 @@ void drawLayoutDefault()
   bool has_voltage = drawBattery(BATT_OFFSET_X, BATT_OFFSET_Y);
 
   // Draw WiFi icon
-  drawWiFiIndicator(has_voltage ? WIFI_OFFSET_X : BATT_OFFSET_X - 13, WIFI_OFFSET_Y);
+  int wifi_x = has_voltage ? WIFI_OFFSET_X : BATT_OFFSET_X - 13;
+  drawWiFiIndicator(wifi_x, WIFI_OFFSET_Y);
+
+  // Draw sleep timer immediately to the left of the WiFi icon
+  drawSleepTimerIndicator(wifi_x - 16, WIFI_OFFSET_Y);
 
   // Set font we are going to use
   spr.setFont(&lgfx::fonts::Orbitron_Light_24);

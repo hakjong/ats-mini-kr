@@ -5,6 +5,8 @@
 #include "Utils.h"
 #include "Menu.h"
 #include "Draw.h"
+#include "Storage.h"
+#include "BleMode.h"
 
 #include <sys/time.h>
 #include <time.h>
@@ -16,6 +18,10 @@ extern ButtonTracker pb1;
 
 // Current sleep status, returned by sleepOn()
 static bool sleep_on = false;
+
+// One-shot deep sleep timer. It intentionally does not persist across restarts.
+static uint16_t sleepTimerMinutes = 0;
+static uint32_t sleepTimerStarted = 0;
 
 // Current SSB patch status
 static bool ssbLoaded = false;
@@ -241,9 +247,16 @@ bool sleepOn(int x)
       while(true)
       {
         esp_sleep_enable_ext0_wakeup((gpio_num_t)ENCODER_PUSH_BUTTON, LOW);
+        uint32_t timerRemaining = sleepTimerRemainingMillis();
+        if(timerRemaining)
+          esp_sleep_enable_timer_wakeup((uint64_t)timerRemaining * 1000);
         rtc_gpio_pullup_en((gpio_num_t)ENCODER_PUSH_BUTTON);
         rtc_gpio_pulldown_dis((gpio_num_t)ENCODER_PUSH_BUTTON);
         esp_light_sleep_start();
+        esp_sleep_disable_wakeup_source(ESP_SLEEP_WAKEUP_TIMER);
+
+        // A sleep-timer wake enters deep sleep instead of returning to the UI.
+        sleepTimerTick();
 
         // Waking up here
         if(currentSleep) break; // Short click is enough to exit from sleep if timeout is enabled
@@ -287,6 +300,54 @@ bool sleepOn(int x)
   }
 
   return(sleep_on);
+}
+
+void sleepTimerSet(uint16_t minutes)
+{
+  sleepTimerMinutes = min(minutes, (uint16_t)180);
+  sleepTimerStarted = millis();
+}
+
+uint16_t sleepTimerConfiguredMinutes()
+{
+  return sleepTimerMinutes;
+}
+
+uint32_t sleepTimerRemainingMillis()
+{
+  if(!sleepTimerMinutes) return 0;
+
+  uint32_t duration = (uint32_t)sleepTimerMinutes * 60 * 1000;
+  uint32_t elapsed = millis() - sleepTimerStarted;
+  return elapsed < duration ? duration - elapsed : 0;
+}
+
+uint16_t sleepTimerRemainingMinutes()
+{
+  uint32_t remaining = sleepTimerRemainingMillis();
+  return remaining ? (remaining + 59999) / 60000 : 0;
+}
+
+void sleepTimerTick()
+{
+  if(!sleepTimerMinutes || sleepTimerRemainingMillis()) return;
+
+  sleepTimerMinutes = 0;
+  muteOn(MUTE_FORCE, true);
+  prefsSave(SAVE_SETTINGS | SAVE_CUR_BAND);
+  netStop();
+  bleStop();
+  ledcWrite(PIN_LCD_BL, 0);
+  tft.sleep();
+  if(PIN_AMP_EN >= 0) digitalWrite(PIN_AMP_EN, LOW);
+  digitalWrite(PIN_POWER_ON, LOW);
+
+  // Wake with the encoder button. setup() recognizes this wake source and
+  // skips the hold-to-reset shortcut while the button is still pressed.
+  esp_sleep_enable_ext0_wakeup((gpio_num_t)ENCODER_PUSH_BUTTON, LOW);
+  rtc_gpio_pullup_en((gpio_num_t)ENCODER_PUSH_BUTTON);
+  rtc_gpio_pulldown_dis((gpio_num_t)ENCODER_PUSH_BUTTON);
+  esp_deep_sleep_start();
 }
 
 //
