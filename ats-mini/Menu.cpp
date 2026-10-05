@@ -119,9 +119,9 @@ static const char *menu[] =
 {
   "Band",
   "Volume",
-  "VF",
-  "VM",
-  "ETM",
+  "V. Freq",
+  "V. Mem",
+  "V. ETM",
   "Seek",
   "Scan",
   "Memory",
@@ -1220,6 +1220,14 @@ static bool mainMenuItemVisible(int8_t index)
   return true;
 }
 
+static bool mainMenuItemActive(int8_t index)
+{
+  if(index == MENU_VF) return tuneModeIdx == TUNE_STEP;
+  if(index == MENU_VM) return tuneModeIdx == TUNE_STATIONS;
+  if(index == MENU_ETM_MODE) return isEtmTuneMode();
+  return false;
+}
+
 static int8_t nextMainMenuItem(int8_t index, int8_t direction)
 {
   do
@@ -1632,7 +1640,13 @@ static void drawMenu(int x, int y, int sx)
     int8_t direction = i > 0 ? 1 : -1;
     for(int steps = abs(i); steps; --steps)
       index = nextMainMenuItem(index, direction);
+    char activeLabel[16];
     const char *label = menu[index];
+    if(mainMenuItemActive(index))
+    {
+      snprintf(activeLabel, sizeof(activeLabel), "* %s", label);
+      label = activeLabel;
+    }
     if(i==0) {
       drawZoomedMenu(label);
       spr.setTextColor(TH.menu_hl_text, TH.menu_hl_bg);
