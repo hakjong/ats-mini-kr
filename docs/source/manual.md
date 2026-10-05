@@ -51,7 +51,7 @@ Direct frequency input is available only in **VF** mode.
 
 ## Menu
 
-The menu can be invoked by clicking the encoder button and is closed automatically after a couple of seconds.
+The menu can be invoked by clicking the encoder button. Menus and adjustment panels remain open until they are closed with the encoder button or another action.
 
 The three tuning-mode controls are at the top of the menu, followed by a separator. The active tuning mode is marked with `*` before its menu label.
 
@@ -84,7 +84,7 @@ A separator follows NTP Now at the end of the main menu.
 * **Calibration** - SSB calibration offset (-2000...2000, per mode/band).
 * **RDS** - Radio Data System options: PS - radio station name, CT - date and time, RT - text, PTY - genre, ALL (EU/US) - everything. RDS CT should contain UTC date and time, but some stations incorrectly transmit local or completely bogus values. The clock is synchronized from RDS only once. To synchronize it again, disable and re-enable RDS CT or switch the receiver off and on.
 * **UTC Offset** - Affects the displayed date and time. Please note that automatic DST transitions are not supported; the offset needs to be adjusted manually.
-* **Date/Time** - Set the UTC date and time with the encoder. Click to select the next field, or short press to set the clock and close the menu. A timeout closes the menu without changing the clock.
+* **Date/Time** - Set the UTC date and time with the encoder. Click to select the next field, or short press to set the clock and close the menu.
 * **FM Region** - FM de-emphasis time constant by region (50µs for EU/JP/AU and KR, 75µs for the US). The default is KR. KR also enables offline Korean FM name lookup from a snapshot of the [Korean radio frequency list](https://namu.wiki/w/라디오%20주파수/대한민국). Planned, suspended, and closed stations are excluded. The list is bundled with the firmware; no Internet connection is needed on the radio. Names may be incomplete or outdated as broadcasters change frequencies.
 * **KR Area** - When FM Region is KR, choose Auto or select one of 22 Korean receiving areas for FM station names. When another FM Region is active, selecting KR Area shows a persistent reminder to select KR first. A manual choice is saved across power cycles and also permits names from adjacent areas. Clearing the FM Memory list or using ATS resets the choice to Auto.
 * **FM Stereo** - **Auto** lets the receiver blend down to mono on its own as the signal gets worse, **Mono** forces mono audio, trading the stereo image for less hiss on a weak station.

@@ -26,7 +26,6 @@
 // SI473/5 and UI
 #define MIN_ELAPSED_TIME         5  // 300
 #define MIN_ELAPSED_RSSI_TIME  200  // RSSI check uses IN_ELAPSED_RSSI_TIME * 6 = 1.2s
-#define ELAPSED_COMMAND      10000  // time to turn off the last command controlled by encoder. Time to goes back to the VFO control // G8PTN: Increased time and corrected comment
 #define DEFAULT_VOLUME          35  // change it for your favorite sound volume
 #define DEFAULT_SLEEP            0  // Default sleep interval, range = 0 (off) to 255 in steps of 5
 #define RDS_CHECK_TIME         250  // Increased from 90
@@ -55,7 +54,6 @@ long lastRDSCheck = millis();
 long lastNTPCheck = millis();
 long lastScheduleCheck = millis();
 
-long elapsedCommand = millis();
 volatile int16_t encoderCount = 0;
 volatile int16_t encoderCountAccel = 0;
 uint16_t currentFrequency;
@@ -920,8 +918,8 @@ void loop()
           break;
       }
     }
-    // Reset timeouts while push and rotate is active
-    elapsedSleep = elapsedCommand = currentTime;
+    // Reset the display sleep timeout while push and rotate is active
+    elapsedSleep = currentTime;
   }
   else
   {
@@ -963,22 +961,22 @@ void loop()
           break;
       }
 
-      // Reset timeouts
-      elapsedSleep = elapsedCommand = currentTime;
+      // Reset the display sleep timeout
+      elapsedSleep = currentTime;
     }
     else if(pb1st.isLongPressed)
     {
       // Encoder is being LONG PRESSED: TOGGLE DISPLAY
       sleepOn(!sleepOn());
       // CPU sleep can take long time, renew the timestamps
-      elapsedSleep = elapsedCommand = currentTime = millis();
+      elapsedSleep = currentTime = millis();
 
     }
     else if(pb1st.wasClicked || pb1st.wasShortPressed)
     {
       // Encoder click or short press
-      // Reset timeouts
-      elapsedSleep = elapsedCommand = currentTime;
+      // Reset the display sleep timeout
+      elapsedSleep = currentTime;
 
       // If in locked/unlocked sleep mode
       if(sleepOn())
@@ -1012,7 +1010,7 @@ void loop()
         needRedraw = true;
 
         // EiBi can take long time, renew the timestamps
-        elapsedSleep = elapsedCommand = currentTime = millis();
+        elapsedSleep = currentTime = millis();
       }
       else if(currentCmd != CMD_NONE)
       {
@@ -1035,25 +1033,12 @@ void loop()
     }
   }
 
-  // Disable commands control
-  if((currentTime - elapsedCommand) > ELAPSED_COMMAND)
-  {
-    // if(getCpuFrequencyMhz()!=80) setCpuFrequencyMhz(80);
-    if(currentCmd != CMD_NONE && currentCmd != CMD_SEEK && currentCmd != CMD_SCAN && currentCmd != CMD_MEMORY && currentCmd != CMD_STATIONS)
-    {
-      currentCmd = CMD_NONE;
-      needRedraw = true;
-    }
-
-    elapsedCommand = currentTime;
-  }
-
   // Display sleep timeout
   if(currentSleep && !sleepOn() && ((currentTime - elapsedSleep) > currentSleep * 1000))
   {
     sleepOn(true);
     // CPU sleep can take long time, renew the timestamps
-    elapsedSleep = elapsedCommand = currentTime = millis();
+    elapsedSleep = currentTime = millis();
   }
 
   if((currentTime - elapsedRSSI) > MIN_ELAPSED_RSSI_TIME)
