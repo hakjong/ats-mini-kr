@@ -112,6 +112,7 @@ Band *getCurrentBand() { return(&bands[bandIdx]); }
 #define MENU_MEMORY       10
 #define MENU_SETTINGS     11
 #define MENU_MORE         12
+#define MENU_MORE_SEPARATOR 13
 
 int8_t menuIdx = MENU_VOLUME;
 uint8_t tuneModeIdx = TUNE_STEP;
@@ -130,7 +131,8 @@ static const char *menu[] =
   "ETM Scan",
   "Favorite",
   "Settings",
-  "---More---",
+  "More",
+  nullptr,
 };
 
 const char *getTuneModeName()
@@ -1230,9 +1232,14 @@ static bool mainMenuItemActive(int8_t index)
   return false;
 }
 
+static bool mainMenuItemSeparator(int8_t index)
+{
+  return index == MENU_SEPARATOR || index == MENU_MORE_SEPARATOR;
+}
+
 static bool mainMenuItemSelectable(int8_t index)
 {
-  return index != MENU_SEPARATOR && mainMenuItemVisible(index);
+  return !mainMenuItemSeparator(index) && mainMenuItemVisible(index);
 }
 
 static int8_t nextMainMenuItem(int8_t index, int8_t direction)
@@ -1658,7 +1665,7 @@ static void drawMenu(int x, int y, int sx)
     for(int steps = abs(i); steps; --steps)
       index = nextMainMenuRow(index, direction);
     int rowY = 64+y+(i*16);
-    if(index == MENU_SEPARATOR)
+    if(mainMenuItemSeparator(index))
     {
       spr.drawLine(10+x, rowY, 70+x+sx, rowY, TH.menu_border);
       continue;
